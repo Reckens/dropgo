@@ -136,24 +136,32 @@ export default function CustomerPage() {
     setError("")
 
     try {
-      // Find and cancel all pending rides for this customer
-      const { data: pendingRides } = await supabase
+      // Cancel ALL active rides (pending, accepted, in_progress)
+      const { data: activeRides, error: fetchError } = await supabase
         .from('ride_requests')
-        .select('id')
+        .select('id, status')
         .eq('customer_id', customerId)
-        .in('status', ['pending'])
+        .in('status', ['pending', 'accepted', 'in_progress'])
 
-      if (pendingRides && pendingRides.length > 0) {
+      if (fetchError) throw fetchError
+
+      if (activeRides && activeRides.length > 0) {
+        // Update all active rides to cancelled
         const { error: cancelError } = await supabase
           .from('ride_requests')
           .update({ status: 'cancelled' })
           .eq('customer_id', customerId)
-          .in('status', ['pending'])
+          .in('status', ['pending', 'accepted', 'in_progress'])
 
         if (cancelError) throw cancelError
 
+        // Reset state immediately
         setHasActiveRide(false)
-        alert("Búsqueda cancelada")
+        setError("")
+
+        console.log(`Cancelled ${activeRides.length} ride(s)`)
+      } else {
+        setError("No hay viajes activos para cancelar")
       }
     } catch (err) {
       console.error("Error canceling search:", err)
