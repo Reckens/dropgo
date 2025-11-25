@@ -39,6 +39,7 @@ export default function CustomerPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [mounted, setMounted] = useState(false)
+  const [hasActiveRide, setHasActiveRide] = useState(false)
   const router = useRouter()
   const [supabase, setSupabase] = useState<ReturnType<typeof getSupabaseClient> | null>(null)
 
@@ -81,6 +82,38 @@ export default function CustomerPage() {
     }
 
     fetchCustomer()
+
+    // Check for active ride
+    const checkActiveRide = async () => {
+      if (!client) return
+      const { data } = await client
+        .from('ride_requests')
+        .select('id, status')
+        .eq('customer_id', id)
+        .in('status', ['pending', 'accepted', 'in_progress'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+      setHasActiveRide(data && data.length > 0)
+    }
+
+    checkActiveRide()
+
+    // Subscribe to ride changes
+    const channel = client
+      .channel('customer_ride_check')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'ride_requests',
+        filter: `customer_id=eq.${id}`
+      }, () => {
+        checkActiveRide()
+      })
+      .subscribe()
+
+    return () => {
+      channel.unsubscribe()
+    }
   }, [])
 
   const handleSelectPickup = (lat: number, lng: number, name: string) => {
@@ -94,6 +127,40 @@ export default function CustomerPage() {
     setDropoffLat(lat)
     setDropoffLng(lng)
     setDropoffLocation(name)
+  }
+
+  const handleCancelSearch = async () => {
+    if (!supabase) return
+
+    setLoading(true)
+    setError("")
+
+    try {
+      // Find and cancel all pending rides for this customer
+      const { data: pendingRides } = await supabase
+        .from('ride_requests')
+        .select('id')
+        .eq('customer_id', customerId)
+        .in('status', ['pending'])
+
+      if (pendingRides && pendingRides.length > 0) {
+        const { error: cancelError } = await supabase
+          .from('ride_requests')
+          .update({ status: 'cancelled' })
+          .eq('customer_id', customerId)
+          .in('status', ['pending'])
+
+        if (cancelError) throw cancelError
+
+        setHasActiveRide(false)
+        alert("Búsqueda cancelada")
+      }
+    } catch (err) {
+      console.error("Error canceling search:", err)
+      setError("Error al cancelar la búsqueda")
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleRequestRide = async () => {
@@ -295,12 +362,22 @@ export default function CustomerPage() {
           <CustomerRideStatus customerId={customerId} />
 
           <Button
-            onClick={handleRequestRide}
+            onClick={hasActiveRide ? handleCancelSearch : handleRequestRide}
             disabled={loading}
             size="lg"
-            className="w-full bg-primary hover:bg-primary/90 text-lg font-semibold py-6"
+            className={`w-full text-lg font-semibold py-6 ${hasActiveRide
+              ? 'bg-destructive hover:bg-destructive/90'
+              : 'bg-primary hover:bg-primary/90'
+              }`}
           >
-            {loading ? "Solicitando..." : selectedDriver ? `🚕 Pedir Viaje a ${selectedDriver.full_name}` : "🚕 Buscar Conductor Cercano"}
+            {loading
+              ? "Solicitando..."
+              : hasActiveRide
+                ? "❌ Cancelar Búsqueda"
+                : selectedDriver
+                  ? `🚕 Pedir Viaje a ${selectedDriver.full_name}`
+                  : "🚕 Buscar Conductor Cercano"
+            }
           </Button>
         </div>
       </main>
