@@ -370,13 +370,9 @@ export default function CustomerPage() {
               : 'bg-primary hover:bg-primary/90'
               }`}
           >
-            {loading
-              ? "Solicitando..."
-              : hasActiveRide
-                ? "❌ Cancelar Búsqueda"
-                : selectedDriver
-                  ? `🚕 Pedir Viaje a ${selectedDriver.full_name}`
-                  : "🚕 Buscar Conductor Cercano"
+            {hasActiveRide
+              ? (loading ? "Cancelando..." : "❌ Cancelar Búsqueda")
+              : (loading ? "Solicitando..." : selectedDriver ? `🚕 Pedir Viaje a ${selectedDriver.full_name}` : "🚕 Buscar Conductor Cercano")
             }
           </Button>
         </div>
