@@ -2,8 +2,16 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Settings, Users, Car, LogOut } from "lucide-react"
+import { LayoutDashboard, Users, Car, Settings, Calculator, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface AdminNavProps {
     onLogout: () => void
@@ -15,7 +23,6 @@ export function AdminNav({ onLogout, adminUsername }: AdminNavProps) {
 
     const navItems = [
         { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-        { href: "/admin/config", label: "Configuración", icon: Settings },
         { href: "/admin/customers", label: "Clientes", icon: Users },
         { href: "/admin/drivers", label: "Conductores", icon: Car },
     ]
@@ -53,13 +60,45 @@ export function AdminNav({ onLogout, adminUsername }: AdminNavProps) {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <span className="text-sm text-muted-foreground hidden sm:block">
-                            👤 {adminUsername}
-                        </span>
-                        <Button variant="ghost" size="sm" onClick={onLogout} className="gap-2">
-                            <LogOut className="w-4 h-4" />
-                            <span className="hidden sm:inline">Salir</span>
-                        </Button>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-10 w-10 rounded-full p-0 overflow-hidden border-2 border-primary/50 hover:border-primary transition-all"
+                                    title="Menú de administrador"
+                                >
+                                    <div className="w-full h-full bg-primary flex items-center justify-center text-lg text-primary-foreground font-bold">
+                                        {adminUsername.charAt(0).toUpperCase()}
+                                    </div>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56">
+                                <DropdownMenuLabel>👤 {adminUsername}</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+
+                                <DropdownMenuItem asChild>
+                                    <Link href="/admin/config" className="cursor-pointer">
+                                        <Settings className="mr-2 h-4 w-4" />
+                                        <span>Configuración</span>
+                                    </Link>
+                                </DropdownMenuItem>
+
+                                <DropdownMenuItem asChild>
+                                    <Link href="/admin/config" className="cursor-pointer">
+                                        <Calculator className="mr-2 h-4 w-4" />
+                                        <span>Tarifas</span>
+                                    </Link>
+                                </DropdownMenuItem>
+
+                                <DropdownMenuSeparator />
+
+                                <DropdownMenuItem onClick={onLogout} className="cursor-pointer text-destructive focus:text-destructive">
+                                    <LogOut className="mr-2 h-4 w-4" />
+                                    <span>Cerrar sesión</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </div>
 
