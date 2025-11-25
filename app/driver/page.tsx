@@ -1,0 +1,298 @@
+"use client"
+
+export const dynamic = "force-dynamic"
+
+import type React from "react"
+
+import { useEffect, useState, useRef } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import dynamicImport from "next/dynamic"
+import Image from "next/image"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { UserNav } from "@/components/user-nav"
+import { getSupabaseClient } from "@/lib/supabase/client"
+import { MapPin, Upload, Calculator, Clock } from "lucide-react"
+import NotificationBell from "@/components/notification-bell"
+
+const GlobalMap = dynamicImport(() => import("@/components/global-map"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-96 bg-muted rounded-lg flex items-center justify-center">Cargando mapa...</div>
+  ),
+})
+
+interface Driver {
+  id: string
+  phone: string
+  full_name: string
+  profile_image_url: string | null
+  is_online: boolean
+  latitude: number | null
+  longitude: number | null
+}
+
+export default function DriverPage() {
+  const [driver, setDriver] = useState<Driver | null>(null)
+  const [isOnline, setIsOnline] = useState(false)
+  const [location, setLocation] = useState<[number, number] | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const [uploading, setUploading] = useState(false)
+  const router = useRouter()
+  const [supabase, setSupabase] = useState<ReturnType<typeof getSupabaseClient> | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const watchIdRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    const client = getSupabaseClient()
+    setSupabase(client)
+
+    const loadDriver = async () => {
+      try {
+        const driverId = localStorage.getItem("driverId")
+        if (!driverId) {
+          router.push("/auth")
+          return
+        }
+
+        if (!client) {
+          setError("Conectando a la base de datos...")
+          return
+        }
+
+        const { data, error } = await client.from("drivers").select("*").eq("id", driverId).single()
+
+        if (error || !data) {
+          console.error("Error loading driver:", error)
+          localStorage.removeItem("driverId")
+          router.push("/auth")
+          return
+        }
+
+        setDriver(data)
+        setIsOnline(data.is_online)
+
+        // Start tracking location
+        if (navigator.geolocation) {
+          watchIdRef.current = navigator.geolocation.watchPosition(
+            (position) => {
+              const [lat, lng] = [position.coords.latitude, position.coords.longitude]
+              setLocation([lat, lng])
+
+              // Update driver location in Supabase
+              client
+                ?.from("drivers")
+                .update({
+                  latitude: lat,
+                  longitude: lng,
+                  last_location_update: new Date().toISOString(),
+                })
+                .eq("id", driverId)
+                .then(() => {
+                  // Location updated
+                })
+            },
+            (error) => {
+              console.error("[v0] Geolocation error:", error)
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 5000,
+            },
+          )
+        }
+
+        setLoading(false)
+      } catch (err: any) {
+        setError(err.message || "Error al cargar perfil")
+        setLoading(false)
+      }
+    }
+
+    loadDriver()
+
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current)
+      }
+    }
+  }, [supabase])
+
+  const handleToggleOnline = async () => {
+    if (!driver || !supabase) return
+
+    try {
+      const newOnlineStatus = !isOnline
+      const { error } = await supabase.from("drivers").update({ is_online: newOnlineStatus }).eq("id", driver.id)
+
+      if (error) throw error
+
+      setIsOnline(newOnlineStatus)
+    } catch (err: any) {
+      setError(err.message || "Error al cambiar estado")
+    }
+  }
+
+  const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !driver || !supabase) return
+
+    setUploading(true)
+    setError("")
+
+    try {
+      const maxSize = 5 * 1024 * 1024 // 5MB
+      if (file.size > maxSize) {
+        setError("La imagen debe ser menor a 5MB")
+        setUploading(false)
+        return
+      }
+
+      // Upload image to Supabase Storage
+      const fileExt = file.name.split(".").pop()?.toLowerCase() || "jpg"
+      const fileName = `${driver.id}-${Date.now()}.${fileExt}`
+      const filePath = `driver-profiles/${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from("driver-profiles")
+        .upload(filePath, file, { upsert: true })
+
+      if (uploadError) {
+        console.error("[v0] Upload error:", uploadError)
+        setError("Error al subir la imagen. Intenta nuevamente.")
+        setUploading(false)
+        return
+      }
+
+      // Get public URL
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("driver-profiles").getPublicUrl(filePath)
+
+      const { error: updateError } = await supabase
+        .from("drivers")
+        .update({ profile_image_url: publicUrl })
+        .eq("id", driver.id)
+
+      if (updateError) {
+        console.error("[v0] Update error:", updateError)
+        setError("Error al actualizar perfil. Intenta nuevamente.")
+        setUploading(false)
+        return
+      }
+
+      setDriver({ ...driver, profile_image_url: publicUrl })
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
+    } catch (err: any) {
+      console.error("[v0] Upload error:", err)
+      setError(err.message || "Error al subir imagen")
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Cargando perfil...</p>
+      </div>
+    )
+  }
+
+  if (!driver) {
+    return null
+  }
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      <header className="bg-card border-b border-border p-4 flex items-center justify-between sticky top-0 z-20 shadow-sm">
+        <h1 className="text-lg font-bold text-foreground">Panel del Conductor</h1>
+        <div className="flex items-center gap-2">
+          <NotificationBell userType="driver" userId={driver.id} />
+          <Link href="/driver/history">
+            <Button variant="ghost" size="icon" className="relative" title="Historial de Viajes">
+              <Clock className="h-5 w-5" />
+            </Button>
+          </Link>
+          <Link href="/calculador">
+            <Button variant="ghost" size="icon" className="relative" title="Calculadora de Tarifas">
+              <Calculator className="h-5 w-5" />
+            </Button>
+          </Link>
+          <UserNav userRole="driver" userId={driver.id} />
+        </div>
+      </header>
+
+      <main className="flex-1 p-4 max-w-2xl mx-auto w-full overflow-y-auto space-y-4">
+        {error && <Card className="p-3 bg-destructive/10 border-destructive/30 text-destructive text-sm">{error}</Card>}
+
+        {/* Driver Profile Card */}
+        <Card className="p-4 bg-card border-border/50">
+          <div className="flex items-start gap-4">
+            <div className="relative group">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="w-20 h-20 rounded-full overflow-hidden bg-muted flex-shrink-0 flex items-center justify-center border-2 border-primary hover:border-primary/80 hover:bg-muted/80 transition-all cursor-pointer disabled:opacity-50 relative"
+              >
+                {driver.profile_image_url ? (
+                  <Image
+                    src={driver.profile_image_url || "/placeholder.svg"}
+                    alt={driver.full_name}
+                    width={80}
+                    height={80}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-8 h-8 text-muted-foreground">👤</div>
+                )}
+                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-full">
+                  <Upload className="w-4 h-4 text-white" />
+                </div>
+              </button>
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleProfileImageUpload} hidden />
+            </div>
+
+            <div className="flex-1">
+              <h2 className="text-lg font-bold text-foreground">{driver.full_name}</h2>
+              <p className="text-sm text-muted-foreground">{driver.phone}</p>
+              <div className="mt-2 flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${isOnline ? "bg-green-500" : "bg-gray-500"}`} />
+                <span className="text-sm text-foreground">{isOnline ? "En línea" : "Fuera de línea"}</span>
+              </div>
+            </div>
+          </div>
+
+          <Button onClick={handleToggleOnline} className="w-full mt-4" variant={isOnline ? "default" : "outline"}>
+            {isOnline ? "🟢 Cambiar a Fuera de Línea" : "⚫ Cambiar a En Línea"}
+          </Button>
+        </Card >
+
+        {/* Map Card */}
+        {
+          location && (
+            <Card className="p-4 bg-card border-border/50 overflow-hidden shadow-lg">
+              <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                <MapPin className="w-4 h-4" />
+                Tu Ubicación en Vivo
+              </h3>
+              <div className="h-72 rounded-lg overflow-hidden">
+                <GlobalMap
+                  showDrivers={true}
+                  currentDriverId={driver.id}
+                  center={location}
+                />
+              </div>
+            </Card>
+          )
+        }
+      </main >
+    </div >
+  )
+}
