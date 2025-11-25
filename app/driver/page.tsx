@@ -214,7 +214,6 @@ export default function DriverPage() {
       <header className="bg-card border-b border-border p-4 flex items-center justify-between sticky top-0 z-20 shadow-sm">
         <h1 className="text-lg font-bold text-foreground">Panel del Conductor</h1>
         <div className="flex items-center gap-2">
-          <NotificationBell userType="driver" userId={driver.id} />
           <Link href="/driver/history">
             <Button variant="ghost" size="icon" className="relative" title="Historial de Viajes">
               <Clock className="h-5 w-5" />
@@ -225,6 +224,7 @@ export default function DriverPage() {
               <Calculator className="h-5 w-5" />
             </Button>
           </Link>
+          <NotificationBell userType="driver" userId={driver.id} />
           <UserNav userRole="driver" userId={driver.id} />
         </div>
       </header>

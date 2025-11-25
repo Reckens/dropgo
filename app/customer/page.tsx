@@ -255,7 +255,6 @@ export default function CustomerPage() {
           <p className="text-sm text-muted-foreground">Bienvenido, {customerName}</p>
         </div>
         <div className="flex items-center gap-2">
-          <NotificationBell userType="customer" userId={customerId} />
           <Link href="/customer/history">
             <Button variant="ghost" size="icon" className="relative" title="Historial de Viajes">
               <Clock className="h-5 w-5" />
@@ -266,6 +265,7 @@ export default function CustomerPage() {
               <Calculator className="h-5 w-5" />
             </Button>
           </Link>
+          <NotificationBell userType="customer" userId={customerId} />
           <UserNav userRole="customer" userId={customerId} />
         </div>
       </header>
