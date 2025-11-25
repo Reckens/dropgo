@@ -374,13 +374,15 @@ export default function CustomerPage() {
             disabled={loading}
             size="lg"
             className={`w-full text-lg font-semibold py-6 ${hasActiveRide
-              ? 'bg-destructive hover:bg-destructive/90'
-              : 'bg-primary hover:bg-primary/90'
+                ? 'bg-yellow-500 hover:bg-yellow-600 text-black'
+                : loading
+                  ? 'bg-primary/50'
+                  : 'bg-primary hover:bg-primary/90'
               }`}
           >
             {hasActiveRide
-              ? (loading ? "Cancelando..." : "❌ Cancelar Búsqueda")
-              : (loading ? "Solicitando..." : selectedDriver ? `🚕 Pedir Viaje a ${selectedDriver.full_name}` : "🚕 Buscar Conductor Cercano")
+              ? (loading ? "Cancelando..." : "🔍 Buscando conductor... (clic para cancelar)")
+              : (loading ? "Solicitando..." : selectedDriver ? `🚕 Pedir Viaje a ${selectedDriver.full_name}` : "🚕 Buscar Conductor")
             }
           </Button>
         </div>
