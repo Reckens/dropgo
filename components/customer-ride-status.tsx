@@ -43,7 +43,7 @@ export default function CustomerRideStatus({ customerId }: CustomerRideStatusPro
                     .from('ride_requests')
                     .select(`*, driver:drivers(full_name, phone, profile_image_url)`)
                     .eq('customer_id', customerId)
-                    .in('status', ['pending', 'accepted', 'in_progress', 'completed'])
+                    .in('status', ['pending', 'accepted', 'in_progress'])
                     .order('created_at', { ascending: false })
                     .limit(1)
                     .single()
