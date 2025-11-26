@@ -383,7 +383,7 @@ export default function CustomerPage() {
             disabled={loading || activeRideStatus === 'in_progress'}
             size="lg"
             className={`w-full text-lg font-semibold py-6 ${activeRideStatus === 'accepted'
-              ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground'
+              ? 'bg-destructive hover:bg-destructive/90 text-white'
               : activeRideStatus === 'pending'
                 ? 'bg-yellow-500 hover:bg-yellow-600 text-black'
                 : activeRideStatus === 'in_progress'
