@@ -33,6 +33,7 @@ export function useCustomerNotifications(customerId: string | null) {
           driver:drivers(full_name)
         `)
                 .eq("customer_id", customerId)
+                .eq("status", "accepted") // Only show when driver accepts
                 .order("created_at", { ascending: false })
                 .limit(10)
 
@@ -44,7 +45,7 @@ export function useCustomerNotifications(customerId: string | null) {
                     driver_name: req.driver?.full_name || "Conductor",
                     pickup_location: req.pickup_location,
                     created_at: req.created_at,
-                    read: req.status === "pending" ? false : true, // Mark non-pending as read
+                    read: false, // Always mark as unread so user sees the notification
                 }))
 
                 setNotifications(formattedNotifications)
