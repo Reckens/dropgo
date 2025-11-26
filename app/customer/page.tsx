@@ -40,6 +40,7 @@ export default function CustomerPage() {
   const [error, setError] = useState("")
   const [mounted, setMounted] = useState(false)
   const [hasActiveRide, setHasActiveRide] = useState(false)
+  const [activeRideStatus, setActiveRideStatus] = useState<string | null>(null)
   const router = useRouter()
   const [supabase, setSupabase] = useState<ReturnType<typeof getSupabaseClient> | null>(null)
 
@@ -93,7 +94,14 @@ export default function CustomerPage() {
         .in('status', ['pending', 'accepted', 'in_progress'])
         .order('created_at', { ascending: false })
         .limit(1)
-      setHasActiveRide(data && data.length > 0)
+
+      if (data && data.length > 0) {
+        setHasActiveRide(true)
+        setActiveRideStatus(data[0].status)
+      } else {
+        setHasActiveRide(false)
+        setActiveRideStatus(null)
+      }
     }
 
     checkActiveRide()
@@ -157,6 +165,7 @@ export default function CustomerPage() {
 
         // Reset state immediately
         setHasActiveRide(false)
+        setActiveRideStatus(null)
         setError("")
 
         console.log(`Cancelled ${activeRides.length} ride(s)`)
@@ -371,18 +380,26 @@ export default function CustomerPage() {
 
           <Button
             onClick={hasActiveRide ? handleCancelSearch : handleRequestRide}
-            disabled={loading}
+            disabled={loading || activeRideStatus === 'in_progress'}
             size="lg"
-            className={`w-full text-lg font-semibold py-6 ${hasActiveRide
+            className={`w-full text-lg font-semibold py-6 ${activeRideStatus === 'accepted'
+              ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground'
+              : activeRideStatus === 'pending'
                 ? 'bg-yellow-500 hover:bg-yellow-600 text-black'
-                : loading
-                  ? 'bg-primary/50'
-                  : 'bg-primary hover:bg-primary/90'
+                : activeRideStatus === 'in_progress'
+                  ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                  : loading
+                    ? 'bg-primary/50'
+                    : 'bg-primary hover:bg-primary/90'
               }`}
           >
-            {hasActiveRide
-              ? (loading ? "Cancelando..." : "🔍 Buscando conductor... (clic para cancelar)")
-              : (loading ? "Solicitando..." : selectedDriver ? `🚕 Pedir Viaje a ${selectedDriver.full_name}` : "🚕 Buscar Conductor")
+            {activeRideStatus === 'accepted'
+              ? (loading ? "Cancelando..." : "❌ Cancelar Viaje")
+              : activeRideStatus === 'pending'
+                ? (loading ? "Cancelando..." : "🔍 Buscando conductor...")
+                : activeRideStatus === 'in_progress'
+                  ? "🚗 Viaje en progreso"
+                  : (loading ? "Solicitando..." : selectedDriver ? `🚕 Pedir Viaje a ${selectedDriver.full_name}` : "🚕 Buscar Conductor")
             }
           </Button>
         </div>
