@@ -15,6 +15,7 @@ import { UserNav } from "@/components/user-nav"
 import { getSupabaseClient } from "@/lib/supabase/client"
 import { MapPin, Upload, Calculator, Clock } from "lucide-react"
 import NotificationBell from "@/components/notification-bell"
+import { useDriverLocation } from "@/hooks/use-driver-location"
 
 const GlobalMap = dynamicImport(() => import("@/components/global-map"), {
   ssr: false,
@@ -40,10 +41,17 @@ export default function DriverPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [uploading, setUploading] = useState(false)
+  const [hasActiveRide, setHasActiveRide] = useState(false)
   const router = useRouter()
   const [supabase, setSupabase] = useState<ReturnType<typeof getSupabaseClient> | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const watchIdRef = useRef<number | null>(null)
+
+  // GPS tracking for active rides
+  const { isSharing, error: gpsError } = useDriverLocation({
+    driverId: driver?.id || null,
+    isActive: hasActiveRide,
+  })
 
   useEffect(() => {
     const client = getSupabaseClient()
@@ -120,6 +128,41 @@ export default function DriverPage() {
       }
     }
   }, [supabase])
+
+  // Check for active rides to enable GPS tracking
+  useEffect(() => {
+    if (!driver?.id || !supabase) return
+
+    const checkActiveRides = async () => {
+      const { data } = await supabase
+        .from('ride_requests')
+        .select('id, status')
+        .eq('driver_id', driver.id)
+        .in('status', ['accepted', 'in_progress'])
+        .limit(1)
+
+      setHasActiveRide(data && data.length > 0)
+    }
+
+    checkActiveRides()
+
+    // Subscribe to ride changes
+    const channel = supabase
+      .channel(`driver-rides-${driver.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'ride_requests',
+        filter: `driver_id=eq.${driver.id}`,
+      }, () => {
+        checkActiveRides()
+      })
+      .subscribe()
+
+    return () => {
+      channel.unsubscribe()
+    }
+  }, [driver?.id, supabase])
 
   const handleToggleOnline = async () => {
     if (!driver || !supabase) return
@@ -224,6 +267,12 @@ export default function DriverPage() {
               <Calculator className="h-5 w-5" />
             </Button>
           </Link>
+          {isSharing && (
+            <div className="flex items-center gap-1 px-2 py-1 bg-green-500/10 border border-green-500/30 rounded-md">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-xs text-green-600 font-medium">GPS Activo</span>
+            </div>
+          )}
           <NotificationBell userType="driver" userId={driver.id} />
           <UserNav userRole="driver" userId={driver.id} />
         </div>

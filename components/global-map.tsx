@@ -22,6 +22,7 @@ export interface GlobalMapProps {
     // Callbacks
     onMapClick?: (lat: number, lng: number) => void
     onDriverSelect?: (driver: DriverLocation) => void
+    onMapReady?: (map: any) => void
 
     // Display options
     showDrivers?: boolean
@@ -39,6 +40,7 @@ export default function GlobalMap({
     destination,
     onMapClick,
     onDriverSelect,
+    onMapReady,
     showDrivers = false,
     showRoute = true,
     selectedDriverId,
@@ -109,6 +111,11 @@ export default function GlobalMap({
 
                 onMapClick(lat, lng)
             })
+        }
+
+        // Notify parent that map is ready
+        if (onMapReady) {
+            onMapReady(mapRef.current)
         }
 
         return () => {

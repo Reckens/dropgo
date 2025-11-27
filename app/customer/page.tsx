@@ -13,6 +13,7 @@ import { SearchLocations } from "@/components/search-locations"
 import { getSupabaseClient } from "@/lib/supabase/client"
 import NotificationBell from "@/components/notification-bell"
 import CustomerRideStatus from "@/components/customer-ride-status"
+import { DriverTracker } from "@/components/driver-tracker"
 import StarRating from "@/components/star-rating"
 import { MapPin, Calculator, Clock } from "lucide-react"
 
@@ -41,6 +42,8 @@ export default function CustomerPage() {
   const [mounted, setMounted] = useState(false)
   const [hasActiveRide, setHasActiveRide] = useState(false)
   const [activeRideStatus, setActiveRideStatus] = useState<string | null>(null)
+  const [assignedDriverId, setAssignedDriverId] = useState<string | null>(null)
+  const [mapRef, setMapRef] = useState<any>(null)
   const router = useRouter()
   const [supabase, setSupabase] = useState<ReturnType<typeof getSupabaseClient> | null>(null)
 
@@ -89,7 +92,7 @@ export default function CustomerPage() {
       if (!client) return
       const { data } = await client
         .from('ride_requests')
-        .select('id, status')
+        .select('id, status, driver_id')
         .eq('customer_id', id)
         .in('status', ['pending', 'accepted', 'in_progress'])
         .order('created_at', { ascending: false })
@@ -98,9 +101,11 @@ export default function CustomerPage() {
       if (data && data.length > 0) {
         setHasActiveRide(true)
         setActiveRideStatus(data[0].status)
+        setAssignedDriverId(data[0].driver_id || null)
       } else {
         setHasActiveRide(false)
         setActiveRideStatus(null)
+        setAssignedDriverId(null)
       }
     }
 
@@ -286,13 +291,22 @@ export default function CustomerPage() {
             <MapPin className="w-4 h-4" />
             Conductores Disponibles
           </h3>
-          <div className="h-72 rounded-lg overflow-hidden">
+          <div className="h-72 rounded-lg overflow-hidden relative">
             <GlobalMap
               showDrivers={true}
               onDriverSelect={setSelectedDriver}
               selectedDriverId={selectedDriver?.id || null}
               center={pickupLat && pickupLng ? [pickupLat, pickupLng] : undefined}
+              onMapReady={setMapRef}
             />
+            {assignedDriverId && pickupLat && pickupLng && mapRef && (
+              <DriverTracker
+                driverId={assignedDriverId}
+                customerLat={pickupLat}
+                customerLng={pickupLng}
+                map={mapRef}
+              />
+            )}
           </div>
         </Card>
 
