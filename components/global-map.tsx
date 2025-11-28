@@ -216,57 +216,77 @@ export default function GlobalMap({
         }
     }, [supabase, showDrivers]) // Removed L from dependencies
 
-    // Render driver markers
+    // Render driver markers - with retry mechanism
     useEffect(() => {
-        if (!mapRef.current || !L || !showDrivers) return
+        const renderDrivers = () => {
+            if (!mapRef.current || !L || !showDrivers) return false
 
-        driverMarkersRef.current.forEach((m) => mapRef.current.removeLayer(m))
-        driverMarkersRef.current.clear()
+            driverMarkersRef.current.forEach((m) => mapRef.current.removeLayer(m))
+            driverMarkersRef.current.clear()
 
-        drivers.forEach((driver) => {
-            if (!driver.latitude || !driver.longitude) return
+            drivers.forEach((driver) => {
+                if (!driver.latitude || !driver.longitude) return
 
-            const isSelected = driver.id === selectedDriverId
-            const isCurrent = driver.id === currentDriverId
-            const size = isSelected || isCurrent ? 96 : 64
+                const isSelected = driver.id === selectedDriverId
+                const isCurrent = driver.id === currentDriverId
+                const size = isSelected || isCurrent ? 96 : 64
 
-            const div = document.createElement("div")
-            div.className = "relative flex items-center justify-center cursor-pointer transition-transform hover:scale-110"
-            div.style.width = size + "px"
-            div.style.height = size + "px"
+                const div = document.createElement("div")
+                div.className = "relative flex items-center justify-center cursor-pointer transition-transform hover:scale-110"
+                div.style.width = size + "px"
+                div.style.height = size + "px"
 
-            const circle = document.createElement("div")
-            circle.className = "absolute inset-0 rounded-full border-4 flex items-center justify-center"
-            circle.style.borderColor = isCurrent ? "#FFA500" : isSelected ? "#EF4444" : "#16A34A"
-            circle.style.backgroundColor = isCurrent ? "#FFD700" : isSelected ? "#FECACA" : "#22C55E"
+                const circle = document.createElement("div")
+                circle.className = "absolute inset-0 rounded-full border-4 flex items-center justify-center"
+                circle.style.borderColor = isCurrent ? "#FFA500" : isSelected ? "#EF4444" : "#16A34A"
+                circle.style.backgroundColor = isCurrent ? "#FFD700" : isSelected ? "#FECACA" : "#22C55E"
 
-            const img = document.createElement("img")
-            img.src = driver.profile_image_url || "/driver-profile.png"
-            img.alt = driver.full_name
-            img.className = "w-full h-full rounded-full object-cover border-2 border-white"
-            img.style.width = "calc(100% - 8px)"
-            img.style.height = "calc(100% - 8px)"
+                const img = document.createElement("img")
+                img.src = driver.profile_image_url || "/driver-profile.png"
+                img.alt = driver.full_name
+                img.className = "w-full h-full rounded-full object-cover border-2 border-white"
+                img.style.width = "calc(100% - 8px)"
+                img.style.height = "calc(100% - 8px)"
 
-            circle.appendChild(img)
-            div.appendChild(circle)
+                circle.appendChild(img)
+                div.appendChild(circle)
 
-            const icon = L.divIcon({
-                html: div.outerHTML,
-                iconSize: [size, size],
-                className: "driver-marker",
+                const icon = L.divIcon({
+                    html: div.outerHTML,
+                    iconSize: [size, size],
+                    className: "driver-marker",
+                })
+
+                const marker = L.marker([driver.latitude, driver.longitude], { icon })
+                    .bindTooltip(driver.full_name, { permanent: false, direction: "top", offset: [0, -10] })
+
+                if (onDriverSelect) {
+                    marker.on("click", () => onDriverSelect(driver))
+                }
+
+                marker.addTo(mapRef.current)
+                driverMarkersRef.current.set(driver.id, marker)
             })
+            return true
+        }
 
-            const marker = L.marker([driver.latitude, driver.longitude], { icon })
-                .bindTooltip(driver.full_name, { permanent: false, direction: "top", offset: [0, -10] })
+        // Try to render immediately
+        const success = renderDrivers()
 
-            if (onDriverSelect) {
-                marker.on("click", () => onDriverSelect(driver))
-            }
+        // If failed (map not ready), retry every second until success
+        let retryInterval: NodeJS.Timeout | null = null
+        if (!success && drivers.length > 0) {
+            retryInterval = setInterval(() => {
+                if (renderDrivers() && retryInterval) {
+                    clearInterval(retryInterval)
+                }
+            }, 1000)
+        }
 
-            marker.addTo(mapRef.current)
-            driverMarkersRef.current.set(driver.id, marker)
-        })
-    }, [drivers, selectedDriverId, currentDriverId, onDriverSelect, L, showDrivers, mapReady]) // Use mapReady state instead of mapRef.current
+        return () => {
+            if (retryInterval) clearInterval(retryInterval)
+        }
+    }, [drivers, selectedDriverId, currentDriverId, onDriverSelect, L, showDrivers, mapReady])
 
     return <div ref={mapContainer} className="w-full h-full rounded-lg overflow-hidden" />
 }
