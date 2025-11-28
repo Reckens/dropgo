@@ -176,15 +176,18 @@ export default function GlobalMap({
 
     // Fetch and subscribe to drivers
     useEffect(() => {
+        console.log('🚗 Driver fetch useEffect:', { supabase: !!supabase, showDrivers, L: !!L })
         if (!supabase || !showDrivers || !L) return
 
         const fetchDrivers = async () => {
-            const { data } = await supabase
+            console.log('🔍 Fetching drivers...')
+            const { data, error } = await supabase
                 .from("drivers")
                 .select("*")
                 .eq("is_online", true)
                 .not("latitude", "is", null)
 
+            console.log('✅ Drivers fetched:', { count: data?.length || 0, error })
             if (data) setDrivers(data)
         }
 
