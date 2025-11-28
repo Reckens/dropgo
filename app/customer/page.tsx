@@ -77,6 +77,11 @@ export default function CustomerPage() {
         setPickupLocation("Cochabamba")
         setPickupEdited(false)
       },
+      {
+        enableHighAccuracy: false, // Faster on mobile
+        timeout: 5000, // 5 seconds max
+        maximumAge: 60000, // Accept cached location up to 1 minute old
+      }
     )
 
     // Fetch customer name
