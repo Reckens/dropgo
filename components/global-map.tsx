@@ -61,6 +61,7 @@ export default function GlobalMap({
 
     // State
     const [drivers, setDrivers] = useState<DriverLocation[]>([])
+    const [mapReady, setMapReady] = useState(false) // Track when map is ready
     const supabase = getSupabaseClient()
 
     // Load Leaflet
@@ -101,6 +102,7 @@ export default function GlobalMap({
         }
 
         // Notify parent that map is ready
+        setMapReady(true) // Set state so React knows map is ready
         if (onMapReady) {
             onMapReady(mapRef.current)
         }
@@ -264,7 +266,7 @@ export default function GlobalMap({
             marker.addTo(mapRef.current)
             driverMarkersRef.current.set(driver.id, marker)
         })
-    }, [drivers, selectedDriverId, currentDriverId, onDriverSelect, L, showDrivers, mapRef.current]) // Added mapRef.current
+    }, [drivers, selectedDriverId, currentDriverId, onDriverSelect, L, showDrivers, mapReady]) // Use mapReady state instead of mapRef.current
 
     return <div ref={mapContainer} className="w-full h-full rounded-lg overflow-hidden" />
 }
