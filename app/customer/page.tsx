@@ -433,7 +433,7 @@ export default function CustomerPage() {
       </main>
 
       {/* Floating Chat Button */}
-      {activeRideId && assignedDriverId && (activeRideStatus === 'accepted' || activeRideStatus === 'in_progress') && (
+      {activeRideId && (
         <button
           onClick={() => setShowChat(true)}
           className="fixed bottom-6 right-6 w-14 h-14 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-lg flex items-center justify-center z-40 transition-transform hover:scale-110"
