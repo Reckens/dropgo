@@ -454,6 +454,26 @@ export default function CustomerPage() {
           onClose={() => setShowChat(false)}
         />
       )}
+
+      {/* DEBUG PANEL - Remove after testing */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed top-20 left-4 bg-black/90 text-white p-4 rounded-lg text-xs z-50 max-w-xs">
+          <div className="font-bold mb-2">🔍 Chat Debug Panel</div>
+          <div>activeRideId: {activeRideId || 'null'}</div>
+          <div>assignedDriverId: {assignedDriverId || 'null'}</div>
+          <div>activeRideStatus: {activeRideStatus || 'null'}</div>
+          <div>hasActiveRide: {hasActiveRide ? 'true' : 'false'}</div>
+          <div className="mt-2 pt-2 border-t border-white/20">
+            <div className="font-bold">Should show button:</div>
+            <div className={activeRideId && assignedDriverId && (activeRideStatus === 'accepted' || activeRideStatus === 'in_progress') ? 'text-green-400' : 'text-red-400'}>
+              {activeRideId && assignedDriverId && (activeRideStatus === 'accepted' || activeRideStatus === 'in_progress') ? '✅ YES' : '❌ NO'}
+            </div>
+          </div>
+          {!activeRideId && <div className="text-yellow-400 mt-2">⚠️ No activeRideId</div>}
+          {!assignedDriverId && <div className="text-yellow-400 mt-2">⚠️ No assignedDriverId</div>}
+          {activeRideStatus !== 'accepted' && activeRideStatus !== 'in_progress' && <div className="text-yellow-400 mt-2">⚠️ Status: {activeRideStatus}</div>}
+        </div>
+      )}
     </div>
   )
 }
