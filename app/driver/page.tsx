@@ -16,6 +16,7 @@ import { getSupabaseClient } from "@/lib/supabase/client"
 import { MapPin, Upload, Calculator, Clock } from "lucide-react"
 import NotificationBell from "@/components/notification-bell"
 import { useDriverLocation } from "@/hooks/use-driver-location"
+import RideChat from "@/components/ride-chat"
 
 const GlobalMap = dynamicImport(() => import("@/components/global-map"), {
   ssr: false,
@@ -42,6 +43,8 @@ export default function DriverPage() {
   const [error, setError] = useState("")
   const [uploading, setUploading] = useState(false)
   const [hasActiveRide, setHasActiveRide] = useState(false)
+  const [showChat, setShowChat] = useState(false)
+  const [activeRideId, setActiveRideId] = useState<string | null>(null)
   const router = useRouter()
   const [supabase, setSupabase] = useState<ReturnType<typeof getSupabaseClient> | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -141,7 +144,13 @@ export default function DriverPage() {
         .in('status', ['accepted', 'in_progress'])
         .limit(1)
 
-      setHasActiveRide(data && data.length > 0)
+      if (data && data.length > 0) {
+        setHasActiveRide(true)
+        setActiveRideId(data[0].id)
+      } else {
+        setHasActiveRide(false)
+        setActiveRideId(null)
+      }
     }
 
     checkActiveRides()
@@ -342,6 +351,29 @@ export default function DriverPage() {
           )
         }
       </main >
+
+      {/* Floating Chat Button */}
+      {activeRideId && hasActiveRide && (
+        <button
+          onClick={() => setShowChat(true)}
+          className="fixed bottom-6 right-6 w-14 h-14 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-lg flex items-center justify-center z-40 transition-transform hover:scale-110"
+          title="Chat con pasajero"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+        </button>
+      )}
+
+      {/* Chat Modal */}
+      {showChat && activeRideId && driver && (
+        <RideChat
+          rideId={activeRideId}
+          userType="driver"
+          userId={driver.id}
+          onClose={() => setShowChat(false)}
+        />
+      )}
     </div >
   )
 }

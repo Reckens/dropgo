@@ -14,6 +14,7 @@ import { getSupabaseClient } from "@/lib/supabase/client"
 import NotificationBell from "@/components/notification-bell"
 import CustomerRideStatus from "@/components/customer-ride-status"
 import { DriverTracker } from "@/components/driver-tracker"
+import RideChat from "@/components/ride-chat"
 import StarRating from "@/components/star-rating"
 import { MapPin, Calculator, Clock } from "lucide-react"
 
@@ -44,6 +45,8 @@ export default function CustomerPage() {
   const [activeRideStatus, setActiveRideStatus] = useState<string | null>(null)
   const [assignedDriverId, setAssignedDriverId] = useState<string | null>(null)
   const [mapRef, setMapRef] = useState<any>(null)
+  const [showChat, setShowChat] = useState(false)
+  const [activeRideId, setActiveRideId] = useState<string | null>(null)
   const router = useRouter()
   const [supabase, setSupabase] = useState<ReturnType<typeof getSupabaseClient> | null>(null)
 
@@ -102,10 +105,12 @@ export default function CustomerPage() {
         setHasActiveRide(true)
         setActiveRideStatus(data[0].status)
         setAssignedDriverId(data[0].driver_id || null)
+        setActiveRideId(data[0].id)
       } else {
         setHasActiveRide(false)
         setActiveRideStatus(null)
         setAssignedDriverId(null)
+        setActiveRideId(null)
       }
     }
 
@@ -418,6 +423,29 @@ export default function CustomerPage() {
           </Button>
         </div>
       </main>
+
+      {/* Floating Chat Button */}
+      {activeRideId && assignedDriverId && (activeRideStatus === 'accepted' || activeRideStatus === 'in_progress') && (
+        <button
+          onClick={() => setShowChat(true)}
+          className="fixed bottom-6 right-6 w-14 h-14 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-lg flex items-center justify-center z-40 transition-transform hover:scale-110"
+          title="Chat con conductor"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+        </button>
+      )}
+
+      {/* Chat Modal */}
+      {showChat && activeRideId && (
+        <RideChat
+          rideId={activeRideId}
+          userType="customer"
+          userId={customerId}
+          onClose={() => setShowChat(false)}
+        />
+      )}
     </div>
   )
 }
