@@ -57,12 +57,10 @@ export default function GlobalMap({
     const destMarkerRef = useRef<any>(null)
     const polylineRef = useRef<any>(null)
     const circleRef = useRef<any>(null)
-    const userMarkerRef = useRef<any>(null)
     const driverMarkersRef = useRef<Map<string, any>>(new Map())
 
     // State
     const [drivers, setDrivers] = useState<DriverLocation[]>([])
-    const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
     const supabase = getSupabaseClient()
 
     // Load Leaflet
@@ -70,23 +68,12 @@ export default function GlobalMap({
         import("leaflet").then((module) => setL(module.default))
     }, [])
 
-    // Get user location
-    useEffect(() => {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => setUserLocation([pos.coords.latitude, pos.coords.longitude]),
-                () => setUserLocation([-17.3895, -66.1568])
-            )
-        } else {
-            setUserLocation([-17.3895, -66.1568])
-        }
-    }, [])
-
     // Initialize map
     useEffect(() => {
-        if (!mapContainer.current || mapRef.current || !L || !userLocation) return
+        if (!mapContainer.current || mapRef.current || !L) return
 
-        const mapCenter = center || origin || userLocation
+        // Use provided center or default to Cochabamba
+        const mapCenter = center || origin || [-17.3895, -66.1568]
         mapRef.current = L.map(mapContainer.current).setView(mapCenter, zoom)
 
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -124,7 +111,7 @@ export default function GlobalMap({
                 mapRef.current = null
             }
         }
-    }, [L, userLocation])
+    }, [L])
 
     // Update origin marker
     useEffect(() => {
@@ -186,23 +173,6 @@ export default function GlobalMap({
         }
     }, [destination, origin, L, showRoute, zoom])
 
-    // Add user location marker
-    useEffect(() => {
-        if (!mapRef.current || !L || !userLocation || origin) return
-
-        if (userMarkerRef.current) {
-            userMarkerRef.current.setLatLng(userLocation)
-        } else {
-            userMarkerRef.current = L.circleMarker(userLocation, {
-                radius: 8,
-                fillColor: "#3B82F6",
-                color: "#1E40AF",
-                weight: 2,
-                opacity: 1,
-                fillOpacity: 0.8,
-            }).addTo(mapRef.current)
-        }
-    }, [userLocation, L, origin])
 
     // Fetch and subscribe to drivers
     useEffect(() => {
