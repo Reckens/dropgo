@@ -264,7 +264,7 @@ export default function GlobalMap({
             marker.addTo(mapRef.current)
             driverMarkersRef.current.set(driver.id, marker)
         })
-    }, [drivers, selectedDriverId, currentDriverId, onDriverSelect, L, showDrivers])
+    }, [drivers, selectedDriverId, currentDriverId, onDriverSelect, L, showDrivers, mapRef.current]) // Added mapRef.current
 
     return <div ref={mapContainer} className="w-full h-full rounded-lg overflow-hidden" />
 }
