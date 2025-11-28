@@ -176,10 +176,10 @@ export default function GlobalMap({
 
     // Fetch and subscribe to drivers
     useEffect(() => {
-        if (!supabase || !showDrivers || !L) return
+        if (!supabase || !showDrivers) return // Removed !L dependency - fetch immediately
 
         const fetchDrivers = async () => {
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from("drivers")
                 .select("*")
                 .eq("is_online", true)
@@ -189,11 +189,6 @@ export default function GlobalMap({
         }
 
         fetchDrivers()
-
-        // Retry after 2 seconds in case initial fetch failed
-        const retryTimeout = setTimeout(() => {
-            fetchDrivers()
-        }, 2000)
 
         const channel = supabase
             .channel("drivers-global")
@@ -215,10 +210,9 @@ export default function GlobalMap({
             .subscribe()
 
         return () => {
-            clearTimeout(retryTimeout)
             supabase.removeChannel(channel)
         }
-    }, [supabase, showDrivers, L])
+    }, [supabase, showDrivers]) // Removed L from dependencies
 
     // Render driver markers
     useEffect(() => {
