@@ -106,6 +106,14 @@ export default function CustomerPage() {
         setActiveRideStatus(data[0].status)
         setAssignedDriverId(data[0].driver_id || null)
         setActiveRideId(data[0].id)
+
+        // Debug: Log chat button visibility conditions
+        console.log('🔍 Chat Debug:', {
+          activeRideId: data[0].id,
+          assignedDriverId: data[0].driver_id,
+          activeRideStatus: data[0].status,
+          shouldShowChat: !!(data[0].id && data[0].driver_id && (data[0].status === 'accepted' || data[0].status === 'in_progress'))
+        })
       } else {
         setHasActiveRide(false)
         setActiveRideStatus(null)

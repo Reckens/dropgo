@@ -147,6 +147,13 @@ export default function DriverPage() {
       if (data && data.length > 0) {
         setHasActiveRide(true)
         setActiveRideId(data[0].id)
+
+        // Debug: Log chat button visibility conditions
+        console.log('🔍 Driver Chat Debug:', {
+          activeRideId: data[0].id,
+          hasActiveRide: true,
+          shouldShowChat: !!(data[0].id)
+        })
       } else {
         setHasActiveRide(false)
         setActiveRideId(null)
