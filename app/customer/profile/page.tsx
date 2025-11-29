@@ -101,17 +101,17 @@ export default function CustomerProfilePage() {
 
       const fileExt = file.name.split(".").pop()?.toLowerCase() || "jpg"
       const fileName = `${customer.id}-${Date.now()}.${fileExt}`
-      const filePath = `customers/${fileName}`
+      const filePath = `customer-profiles/${fileName}`
 
       const { error: uploadError } = await supabase.storage
-        .from("profile-images")
+        .from("driver-profiles")
         .upload(filePath, file, { upsert: true })
 
       if (uploadError) throw uploadError
 
       const {
         data: { publicUrl },
-      } = supabase.storage.from("profile-images").getPublicUrl(filePath)
+      } = supabase.storage.from("driver-profiles").getPublicUrl(filePath)
 
       const { error: updateError } = await supabase
         .from("customers")
