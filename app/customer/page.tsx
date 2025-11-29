@@ -14,7 +14,6 @@ import { getSupabaseClient } from "@/lib/supabase/client"
 import NotificationBell from "@/components/notification-bell"
 import CustomerRideStatus from "@/components/customer-ride-status"
 import { DriverTracker } from "@/components/driver-tracker"
-import RideChat from "@/components/ride-chat"
 import StarRating from "@/components/star-rating"
 import { MapPin, Calculator, Clock } from "lucide-react"
 
